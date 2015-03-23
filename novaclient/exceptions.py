@@ -105,19 +105,6 @@ class ClientException(Exception):
         return formatted_string
 
 
-class RetryAfterException(ClientException):
-    """
-    The base exception class for ClientExceptions that use Retry-After header.
-    """
-    def __init__(self, *args, **kwargs):
-        try:
-            self.retry_after = int(kwargs.pop('retry_after'))
-        except (KeyError, ValueError):
-            self.retry_after = 0
-
-        super(RetryAfterException, self).__init__(*args, **kwargs)
-
-
 class BadRequest(ClientException):
     """
     HTTP 400 - Bad request: you sent some malformed data.
@@ -167,15 +154,23 @@ class Conflict(ClientException):
     message = "Conflict"
 
 
-class OverLimit(RetryAfterException):
+class OverLimit(ClientException):
     """
     HTTP 413 - Over limit: you're over the API limits for this time period.
     """
     http_status = 413
     message = "Over limit"
 
+    def __init__(self, *args, **kwargs):
+        try:
+            self.retry_after = int(kwargs.pop('retry_after'))
+        except (KeyError, ValueError):
+            self.retry_after = 0
 
-class RateLimit(RetryAfterException):
+        super(OverLimit, self).__init__(*args, **kwargs)
+
+
+class RateLimit(OverLimit):
     """
     HTTP 429 - Rate limit: you've sent too many requests for this time period.
     """
@@ -225,8 +220,6 @@ def from_response(response, body, url, method=None):
         if resp.status_code != 200:
             raise exception_from_response(resp, rest.text)
     """
-    cls = _code_map.get(response.status_code, ClientException)
-
     kwargs = {
         'code': response.status_code,
         'method': method,
@@ -237,8 +230,7 @@ def from_response(response, body, url, method=None):
     if response.headers:
         kwargs['request_id'] = response.headers.get('x-compute-request-id')
 
-        if (issubclass(cls, RetryAfterException) and
-                'retry-after' in response.headers):
+        if 'retry-after' in response.headers:
             kwargs['retry_after'] = response.headers.get('retry-after')
 
     if body:
@@ -253,6 +245,7 @@ def from_response(response, body, url, method=None):
         kwargs['message'] = message
         kwargs['details'] = details
 
+    cls = _code_map.get(response.status_code, ClientException)
     return cls(**kwargs)
 
 

@@ -225,11 +225,11 @@ class Server(base.Resource):
         """Diagnostics -- Retrieve server diagnostics."""
         return self.manager.diagnostics(self)
 
-    def migrate(self):
+    def migrate(self, az=None):
         """
         Migrate a server to a new host.
         """
-        self.manager.migrate(self)
+        self.manager.migrate(self, az)
 
     def remove_fixed_ip(self, address):
         """
@@ -974,13 +974,13 @@ class ServerManager(base.BootingManagerWithFind):
         _resp, body = self._action('rebuild', server, body, **kwargs)
         return Server(self, body['server'])
 
-    def migrate(self, server):
+    def migrate(self, server, az=None):
         """
         Migrate a server to a new host.
 
         :param server: The :class:`Server` (or its ID).
         """
-        self._action('migrate', server)
+        self._action('migrate', server, az)
 
     def resize(self, server, flavor, disk_config=None, **kwargs):
         """
