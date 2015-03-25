@@ -1397,7 +1397,7 @@ def do_resize_revert(cs, args):
 
 
 @utils.arg('server', metavar='<server>', help=_('Name or ID of server.'))
-@utils.arg('az', metavar='<az>', help=_('AZ of target.'))
+@utils.arg('--availability-zone', default=None, metavar='<az>', help=_('AZ of target.'))
 @utils.arg('--poll',
     dest='poll',
     action="store_true",
@@ -1406,7 +1406,7 @@ def do_resize_revert(cs, args):
 def do_migrate(cs, args):
     """Migrate a server. The new host will be selected by the scheduler."""
     server = _find_server(cs, args.server)
-    server.migrate(args.az)
+    server.migrate(args.availability_zone)
 
     if args.poll:
         _poll_for_status(cs.servers.get, server.id, 'migrating',
